@@ -202,6 +202,128 @@ For “set it and forget it” runs.
 ---
 
 ### 8. Wrapping Up
+Practice makes perfect—log in, transfer files, load modules, and submit a job or two. Soon you’ll be running simulations so big, your laptop will feel like a potato next to Kamiak. Good luck, and may your job queues be ever short! 🎉
+
+### 9. Pro Tips & Sample Scripts
+
+Here’s a grab-bag of scripts and snippets you can rip off for your own setup. Trust me, life’s too short to type everything from scratch.
+
+---
+
+#### 9.1 Your `load.txt` Quick-Start
+
+When you first SSH in, you might run:
+
+```bash
+# “cat load.txt” – AKA my personal brain dump
+module avail
+module load StdEnv intel/25.0 gcc/14.2 python3/3.11.4 cuda/12.2.0 cudnn/8.9.7_cuda12.2
+
+# Job monitoring 101
+squeue -u nathan.balcarcel
+squeue -a
+scancel [JOB_ID]
+
+# Elapsed time & status for a finished job
+sacct -j [JOB_ID] --format=Elapsed
+sacct --format=Elapsed,State -j [JOB_ID]
+sacct --helpformat
+
+# Launch my custom Python-venv alias
+pyv grapes
+```
+
+> **Heads up:**
+>
+> * The first `module avail` shows everything installed.
+> * The `module load …` line is exactly what I always use—feel free to swap in your favorite compiler, Python, CUDA, etc.
+> * You can’t run `module avail` inside a batch script, FYI—I’ve tried, it throws tantrums.
+
+---
+
+#### 9.2 My `.bashrc` Snippets
+
+*Stick this in your `~/.bashrc` for fun colors & a sweet `pyv` alias.*
+
+```bash
+# Source global definitions if they exist
+if [ -f /etc/bashrc ]; then
+    . /etc/bashrc
+fi
+
+# Fancy prompt coloring
+RESET_="\[$(tput sgr0)\]"
+BOLD_="\[$(tput bold)\]"
+HOSTNAME_="\[$(tput setaf 10)\]"
+DIR_="\[$(tput setaf 8)\]"
+WHITE_="\[$(tput setaf 15)\]"
+
+PS1="${BOLD_}${WHITE_}\u${HOSTNAME_}@\h${WHITE_}:${DIR_}\w${WHITE_}$ ${RESET_}${WHITE_}"
+
+# Aliases
+alias ls="ls --color=auto"
+alias la="ls -a --color=auto"
+alias py="python3"
+alias da="deactivate"
+
+# Quick-launch Python venv
+pyv() {
+    VENVPATH="${HOME}/venvs/$1"
+    if [ -d "$VENVPATH" ]; then
+        source "$VENVPATH/bin/activate"
+    else
+        echo "⚠️  Could not find virtual environment: $VENVPATH"
+    fi
+}
+
+# Cargo stuff (if you use Rust)
+. "$HOME/.cargo/env"
+
+# Add custom apps to PATH
+export PATH="$PATH:~/Applications"
+```
+
+> **Pro Tip:**
+> Create a `~/venvs/` folder, then do `python3 -m venv ~/venvs/grapes`. After that, `pyv grapes` is magic.
+
+---
+
+#### 9.3 A Sample `kamiak.srun`
+
+*Save this as `run_kamiak.sh` (or whatever floats your boat) and `chmod +x` it:*
+
+```bash
+#!/bin/bash
+#SBATCH --partition=kamiak         # Queue
+#SBATCH --job-name=myJob           # Job name
+#SBATCH --output=result.out        # Stdout
+#SBATCH --error=errors.err         # Stderr
+#SBATCH --mail-type=ALL            # Notifications: BEGIN,END,FAIL,ALL
+#SBATCH --mail-user=your.name@wsu.edu
+#SBATCH --time=1-00:00:00          # 1 day
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=10
+#SBATCH --gres=gpu:tesla:1         # Request 1 GPU (Tesla)
+
+# Your commands go here. Example:
+module load python3/3.11.4
+pyv grapes
+srun python my_heavy_script.py
+```
+
+After you `sbatch run_kamiak.sh`, you’ll get a job ID—then:
+
+```bash
+echo "Check status: sacct --format=Elapsed,State -j <YOUR_JOB_ID>"
+```
+
+And voilà, you’re tracking progress like a pro.
+
+---
+
+That’s all, folks! 🚀 Now get in there, mess around, and may your compute nodes be ever in your favor.
+
 
 Practice makes perfect—log in, transfer files, load modules, and submit a job or two. Soon you’ll be running simulations so big, your laptop will feel like a potato next to Kamiak. Good luck, and may your job queues be ever short! 🎉
 
