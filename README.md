@@ -1,13 +1,13 @@
-## 🚀 A User‑Friendly Guide to the WSU Kamiak Supercomputer
+## 🚀 A User-Friendly Guide to the WSU Kamiak Supercomputer
 
 Hey Nerds! This guide walks you from “What the heck is Kamiak?” to “Behold! My job completed with zero errors.”
-Don't worry I'm a nerd too :p
----
+Don't worry I'm a nerd too \:p
+------------------------------
 
 ### 1. What Is Kamiak … and Why Should You Care?
 
 * **Kamiak = a bazillion tiny computers** (nodes) joined by **invisible cluster magic**.
-* No clicking icons here—everything’s done via command‑line voodoo and a scheduler.
+* No clicking icons here—everything’s done via command-line voodoo and a scheduler.
 * **When to use it**:
 
   * 📊 Analyzing gargantuan datasets
@@ -17,7 +17,7 @@ Don't worry I'm a nerd too :p
 
 > **Pro Tip:**
 > The **login node** (kamiak.wsu.edu) is your front porch—use it for light work (editing, compiling).
-> The **compute nodes** are the heavy‑lifters—reserve them for your big jobs.
+> The **compute nodes** are the heavy-lifters—reserve them for your big jobs.
 
 ---
 
@@ -46,13 +46,26 @@ ssh your.wsu.id@kamiak.wsu.edu
 2. Restart, launch **Ubuntu**, set up a Linux user.
 3. In Ubuntu shell, same SSH command as above.
 
-> **Note:** If WSL fails to load (because Hyper‑V and Virtual Machine features are only available on Windows Pro), you may need to upgrade to Windows **Pro** edition to enable WSL properly.
+> **Note:** If WSL fails to load (because Hyper-V and Virtual Machine features are only available on Windows Pro), you may need to upgrade to Windows **Pro** edition to enable WSL properly.
+
+> **X11 Forwarding:** Want to run GUI apps from Kamiak?
+>
+> Install [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [XMing](https://sourceforge.net/projects/xming/), then start it **before** connecting.
+>
+> Use `ssh -X your.wsu.id@kamiak.wsu.edu` to forward GUI apps like MATLAB.
 
 #### macOS / Linux (Because it’s basically Unix already)
 
 1. Open **Terminal**.
 2. Run `ssh your.wsu.id@kamiak.wsu.edu`.
 3. Say **yes**, type your password, and voilà, you’re in.
+
+> For GUI apps: Install [XQuartz](https://www.xquartz.org/), then run:
+>
+> ```bash
+> defaults write org.macosforge.xquartz.X11 enable_iglx -bool true
+> ssh -X your.wsu.id@kamiak.wsu.edu
+> ```
 
 ---
 
@@ -63,7 +76,7 @@ ssh your.wsu.id@kamiak.wsu.edu
   * Backed up, but limited.
 * **Scratch**: `/scratch/your.wsu.id`
 
-  * **NOT** backed up, auto‑deleted after 21 days.
+  * **NOT** backed up, auto-deleted after 21 days.
 * **Data**: `/data/…`
 
   * Shared, backed up; ideal for big group projects.
@@ -80,6 +93,15 @@ mv a b      # Move/rename
 rm file     # Delete (use with caution…)
 ```
 
+> **Bonus:** Need temporary, high-speed space?
+>
+> ```bash
+> export myScratch=$(mkworkspace)
+> lsworkspace  # List your workspaces
+> ```
+>
+> They expire in \~14 days. Use with care!
+
 ---
 
 ### 4. Moving Files (scp ≠ “soaping”)
@@ -94,7 +116,15 @@ scp my_script.py your.id@kamiak.wsu.edu:~/
 scp your.id@kamiak.wsu.edu:~/results.txt .
 ```
 
-> **Option B:** Drag‑and‑drop with **FileZilla** or **Cyberduck**. Pretty GUI, same creds.
+> **Option B:** Drag-and-drop with **FileZilla** or **Cyberduck**. Pretty GUI, same creds.
+
+> **Power Users:** Use `rsync` for syncing:
+>
+> ```bash
+> rsync -avz ./localdir your.id@kamiak.wsu.edu:~/remotedir
+> ```
+>
+> Only copies what changed. Super efficient.
 
 ---
 
@@ -127,6 +157,8 @@ scp your.id@kamiak.wsu.edu:~/results.txt .
   module purge   # fresh slate
   ```
 
+> **Note:** If `module avail` fails inside a batch script, it's not you. SLURM just gets cranky about it.
+
 ---
 
 ### 6. Running Jobs: SLURM to the Rescue
@@ -145,47 +177,15 @@ exit  # when done
 
 For “set it and forget it” runs.
 
-1. **hello\_kamiak.py**
+*See full examples in section 9.3 below!*
 
-   ```python
-   import platform, os
-   print("👋 Hello from Kamiak!")
-   print("Node:", platform.node())
-   print("SLURM Job ID:", os.getenv("SLURM_JOB_ID", "none"))
-   ```
-
-2. **run\_hello.sh**
-
-   ```bash
-   #!/bin/bash
-   #SBATCH --job-name=hello_test
-   #SBATCH --partition=kamiak
-   #SBATCH --time=00:05:00
-   #SBATCH --nodes=1
-   #SBATCH --ntasks-per-node=1
-   #SBATCH --cpus-per-task=1
-   #SBATCH --mem=1G
-   #SBATCH --output=%x_%j.out
-   #SBATCH --error=%x_%j.err
-   #SBATCH --mail-type=END,FAIL
-   #SBATCH --mail-user=your.wsu.id@wsu.edu
-
-   echo "Starting at $(date)"
-   module load python/3.9.1
-   srun python hello_kamiak.py
-   echo "Done at $(date)"
-   ```
-
-3. **Submit & Monitor**
-
-   ```bash
-   sbatch run_hello.sh
-   squeue -u your.wsu.id     # see queued/running jobs
-   sacct -u your.wsu.id      # see history
-   scancel JOBID             # kill it, if needed
-   ```
-
-> **Note:** After completion, check `<jobname>_<jobid>.out` and `.err` for output and errors.
+```bash
+sbatch run_kamiak.sh
+squeue -u your.wsu.id     # see queued/running jobs
+sacct -u your.wsu.id      # see history
+scancel JOBID             # kill it, if needed
+scontrol show job JOBID   # detailed job info
+```
 
 ---
 
@@ -202,11 +202,8 @@ For “set it and forget it” runs.
 ---
 
 ### 8. Wrapping Up
+
 Practice makes perfect—log in, transfer files, load modules, and submit a job or two. Soon you’ll be running simulations so big, your laptop will feel like a potato next to Kamiak. Good luck, and may your job queues be ever short! 🎉
-
-### 9. Pro Tips & Sample Scripts
-
-Here’s a grab-bag of scripts and snippets you can rip off for your own setup. Trust me, life’s too short to type everything from scratch.
 
 ---
 
