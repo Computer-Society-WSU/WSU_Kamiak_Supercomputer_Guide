@@ -1,326 +1,261 @@
+---
+
 ## 🚀 A User-Friendly Guide to the WSU Kamiak Supercomputer
 
-Hey Nerds! This guide walks you from “What the heck is Kamiak?” to “Behold! My job completed with zero errors.”
-Don't worry I'm a nerd too \:p
-------------------------------
+*For scientists, analysts, and researchers who need serious compute power—no CS degree required.*
+Whether you run climate models, molecular dynamics, or microscopy image processing, this guide will help you navigate Kamiak smoothly.
 
-### 1. What Is Kamiak … and Why Should You Care?
+---
 
-* **Kamiak = a bazillion tiny computers** (nodes) joined by **invisible cluster magic**.
-* No clicking icons here—everything’s done via command-line voodoo and a scheduler.
-* **When to use it**:
+### 1. What Is Kamiak—and Why Use It for Research?
 
-  * 📊 Analyzing gargantuan datasets
-  * 🔬 Running physics/chemistry simulations
-  * 🤖 Training your next ML masterpiece
-  * ⚙️ Parallelizable tasks (i.e., embarrassingly parallel)
+* **Kamiak** is a high-performance cluster: a fleet of networked computers (nodes) working together via SLURM scheduler magic.
+* No GUIs—everything is done via the command line and batch scripts.
+* **Ideal for research tasks**:
+
+  * 📊 Large-scale data analysis (e.g., genomics, survey data)
+  * 🔬 Scientific simulations (e.g., fluid dynamics, molecular modeling)
+  * 🛰️ Geospatial processing
+  * ⚙️ Parallel computations (e.g., parameter sweeps)
 
 > **Pro Tip:**
-> The **login node** (kamiak.wsu.edu) is your front porch—use it for light work (editing, compiling).
-> The **compute nodes** are the heavy-lifters—reserve them for your big jobs.
+>
+> * **Login node** (`kamiak.wsu.edu`): light editing, code compilation, monitoring only.
+> * **Compute nodes**: heavy lifting—run your simulations and analyses here.
+
+---
+
+### ⚠️ WARNING: Don’t Compile or Run Heavy Work on the Login Node
+
+**What’s the login node?**
+It’s the shared gateway where you SSH in. It’s meant for interactive tasks like editing scripts—not for memory‑ or CPU‑intensive research workloads.
+
+**Why avoid it?**
+
+* Resource contention can slow down or crash the gateway node for all users.
+* Running big analyses there may lead to account suspension by HPC support.
+
+**Do this instead:**
+
+1. Log in and load necessary modules.
+2. Launch an interactive session on a compute node:
+
+   ```bash
+   idev --time=02:00:00 --cpus-per-task=8
+   # Now you’re on a compute node—run your compile or test here!
+   exit
+   ```
+3. Or package your entire workflow into a batch script (see section 6) and submit with `sbatch`.
 
 ---
 
 ### 2. Connecting to Kamiak
 
-You need two ingredients: **SSH** + your **Terminal**.
+#### macOS / Linux
 
 ```bash
 ssh your.wsu.id@kamiak.wsu.edu
 ```
 
-#### Windows PowerShell (Noobs’ Edition)
+#### Windows PowerShell
 
-1. Open **PowerShell**.
-2. Paste: `ssh cougar.creative@kamiak.wsu.edu`
-3. Type **yes** on host authenticity prompt.
-4. Blindly enter your WSU password (nobody sees it—even you).
+```powershell
+ssh your.wsu.id@kamiak.wsu.edu
+```
 
-#### Windows Subsystem for Linux (Pro Edition)
+(Accept host key, enter your password—quietly and securely.)
 
-1. Run (as Admin):
+#### Windows WSL (You need Windows Pro/Education edition for this)
 
-   ```powershell
-   wsl --install
+```powershell
+wsl --install
+# Reboot and launch Ubuntu
+ssh your.wsu.id@kamiak.wsu.edu
+```
+
+> **GUI Forwarding for Visualization Tools**:
+>
+> * Windows: Install VcXsrv or XMing.
+> * macOS: Install XQuartz.
+>   Use `ssh -X …` to run tools like MATLAB or RStudio with GUI.
+
+---
+
+### 3. Navigating the File System as a Researcher
+
+* **Home**: `/home/your.wsu.id` — backed up nightly, but limited space.
+* **Scratch**: `/scratch/your.wsu.id` — high-speed I/O, **not** backed up, auto-deletes after 21 days—perfect for intermediate data.
+* **Data**: `/data/...` — backed up, shared with collaborators on group projects.
+
+```bash
+pwd  # current directory
+ls   # list files
+cd   # change directory
+mkdir dir  # make folder
+df -h  # disk usage
+grants insight on storage
+```
+
+Need extra temporary workspace?
+
+```bash
+export MY_SCRATCH=$(mkworkspace)
+lsworkspace  # list your active workspaces
+```
+
+---
+
+### 4. Transferring Files: Lab Data, Scripts, Results
+
+**Always run these on your local machine, not on the login node**:
+
+```bash
+# Upload experimental scripts or data files
+scp dataset.csv your.id@kamiak.wsu.edu:~/scratch/
+# Download output files or logs
+tail -n 50 ~/scratch/results.log  # preview before transferring
+scp your.id@kamiak.wsu.edu:~/scratch/results.csv ./
+```
+
+**GUI option**: FileZilla or Cyberduck works with your WSU credentials.
+**Efficient sync**: rsync only copies differences—great for large datasets:
+
+```bash
+rsync -avz ./local_data your.id@kamiak.wsu.edu:~/data/projectX
+```
+
+---
+
+### 5. Software Modules for Research Environments
+
+Kamiak provides scientific software via modules:
+
+```bash
+module avail             # list all available tools
+module spider R          # search for R versions or packages
+module load python/3.11  # load Python
+module list              # see loaded modules
+module unload python     # remove Python
+module purge             # clear all modules
+```
+
+> **Tip:** Some modules (e.g., MPI, GPU libraries) must match your application’s version to avoid runtime errors.
+
+---
+
+### 5.1 Tools & Dependencies for Non‑Sudo environment
+
+By default, all users do not have root access, which means we cannot use the 'sudo' command, because of this we have to create our own toolbox:
+
+1. **Create a local install directory**:
+
+   ```bash
+   mkdir -p ~/tools/bin ~/tools/lib
    ```
-2. Restart, launch **Ubuntu**, set up a Linux user.
-3. In Ubuntu shell, same SSH command as above.
+2. **Update your environment** (`~/.bashrc`):
 
-> **Note:** If WSL fails to load (because Hyper-V and Virtual Machine features are only available on Windows Pro), you may need to upgrade to Windows **Pro** edition to enable WSL properly.
+   ```bash
+   export PATH="$HOME/tools/bin:$HOME/.local/bin:$PATH"
+   export LD_LIBRARY_PATH="$HOME/tools/lib:$LD_LIBRARY_PATH"
+   ```
+3. **Install R/Python packages locally**:
 
-> **X11 Forwarding:** Want to run GUI apps from Kamiak?
->
-> Install [VcXsrv](https://sourceforge.net/projects/vcxsrv/) or [XMing](https://sourceforge.net/projects/xming/), then start it **before** connecting.
->
-> Use `ssh -X your.wsu.id@kamiak.wsu.edu` to forward GUI apps like MATLAB.
+   ```bash
+   # R packages
+   R -q -e 'install.packages("dplyr", lib="~/tools/lib/R")'
+   # Python packages
+   ```
 
-#### macOS / Linux (Because it’s basically Unix already)
+echo 'export PATH="\$HOME/.local/bin:\$PATH"' >> \~/.bashrc
+pip install --user pandas scipy
 
-1. Open **Terminal**.
-2. Run `ssh your.wsu.id@kamiak.wsu.edu`.
-3. Say **yes**, type your password, and voilà, you’re in.
+````
+4. **Compile C/C++ research tools**:
+```bash
+cd ~/tools
+git clone https://github.com/example/analysis-tool.git
+cd analysis-tool && mkdir build && cd build
+cmake -DCMAKE_INSTALL_PREFIX=$HOME/tools ..
+make && make install
+````
 
-> For GUI apps: Install [XQuartz](https://www.xquartz.org/), then run:
->
-> ```bash
-> defaults write org.macosforge.xquartz.X11 enable_iglx -bool true
-> ssh -X your.wsu.id@kamiak.wsu.edu
-> ```
+This way, you maintain all dependencies in your home space—no sudo needed.
 
 ---
 
-### 3. The Kamiak Filesystem & Your “Home”
+### 6. Running Your Research Workloads with SLURM
 
-* **Home**: `/home/your.wsu.id`
-
-  * Backed up, but limited.
-* **Scratch**: `/scratch/your.wsu.id`
-
-  * **NOT** backed up, auto-deleted after 21 days.
-* **Data**: `/data/…`
-
-  * Shared, backed up; ideal for big group projects.
-
-#### Handy Commands
+#### Interactive Sessions (for testing pipelines)
 
 ```bash
-pwd         # Where am I?
-ls          # What’s here?
-cd …        # Go somewhere else
-mkdir foo   # Make a new folder
-cp a b      # Copy a→b
-mv a b      # Move/rename
-rm file     # Delete (use with caution…)
+idev --time=01:00:00 --cpus-per-task=4
+# you’re now on a compute node—run your data prep or test scripts here!
+exit
 ```
 
-> **Bonus:** Need temporary, high-speed space?
->
-> ```bash
-> export myScratch=$(mkworkspace)
-> lsworkspace  # List your workspaces
-> ```
->
-> They expire in \~14 days. Use with care!
+#### Batch Jobs (for full-scale experiments)
 
----
-
-### 4. Moving Files (scp ≠ “soaping”)
-
-Run these **locally**—not after you SSH in.
-
-```bash
-# Upload to Kamiak
-scp my_script.py your.id@kamiak.wsu.edu:~/  
-
-# Download from Kamiak
-scp your.id@kamiak.wsu.edu:~/results.txt .
-```
-
-> **Option B:** Drag-and-drop with **FileZilla** or **Cyberduck**. Pretty GUI, same creds.
-
-> **Power Users:** Use `rsync` for syncing:
->
-> ```bash
-> rsync -avz ./localdir your.id@kamiak.wsu.edu:~/remotedir
-> ```
->
-> Only copies what changed. Super efficient.
-
----
-
-### 5. Software Modules: “module load = instant superpowers”
-
-* **List everything**:
-
-  ```bash
-  module avail
-  ```
-* **Search for a tool**:
-
-  ```bash
-  module spider python
-  ```
-* **Load it** (e.g., Python 3.9.1):
-
-  ```bash
-  module load python/3.9.1
-  ```
-* **See what you’ve got**:
-
-  ```bash
-  module list
-  ```
-* **Unload**:
-
-  ```bash
-  module unload python
-  module purge   # fresh slate
-  ```
-
-> **Note:** If `module avail` fails inside a batch script, it's not you. SLURM just gets cranky about it.
-
----
-
-### 6. Running Jobs: SLURM to the Rescue
-
-#### 🔧 Interactive (IDEV)
-
-For quick tests & debugging:
-
-```bash
-idev --time=01:00:00 --cpus-per-task=8
-# …then you’re on compute node cnXXX—play away!
-exit  # when done
-```
-
-#### 📜 Batch (SBATCH)
-
-For “set it and forget it” runs.
-
-*See full examples in section 9.3 below!*
-
-```bash
-sbatch run_kamiak.sh
-squeue -u your.wsu.id     # see queued/running jobs
-sacct -u your.wsu.id      # see history
-scancel JOBID             # kill it, if needed
-scontrol show job JOBID   # detailed job info
-```
-
----
-
-### 7. Be a Good Cluster Citizen
-
-* **Ask for only what you need**
-  🚫 Don’t request 7 days & 128 GB RAM if you need 2 hrs & 4 GB.
-* **Use `/scratch` for heavy I/O**
-  Faster and won’t bloat your home space.
-* **Backup your code** elsewhere—just in case.
-* **Cite Kamiak** in any publications.
-* **Ask HPC support** when you’re stuck—they’re actual humans.
-
----
-
-### 8. Wrapping Up
-
-Practice makes perfect—log in, transfer files, load modules, and submit a job or two. Soon you’ll be running simulations so big, your laptop will feel like a potato next to Kamiak. Good luck, and may your job queues be ever short! 🎉
-
----
-
-#### 9.1 Your `load.txt` Quick-Start
-
-When you first SSH in, you might run:
-
-```bash
-# “cat load.txt” – AKA my personal brain dump
-module avail
-module load StdEnv intel/25.0 gcc/14.2 python3/3.11.4 cuda/12.2.0 cudnn/8.9.7_cuda12.2
-
-# Job monitoring 101
-squeue -u nathan.balcarcel
-squeue -a
-scancel [JOB_ID]
-
-# Elapsed time & status for a finished job
-sacct -j [JOB_ID] --format=Elapsed
-sacct --format=Elapsed,State -j [JOB_ID]
-sacct --helpformat
-
-# Launch my custom Python-venv alias
-pyv grapes
-```
-
-> **Heads up:**
->
-> * The first `module avail` shows everything installed.
-> * The `module load …` line is exactly what I always use—feel free to swap in your favorite compiler, Python, CUDA, etc.
-> * You can’t run `module avail` inside a batch script, FYI—I’ve tried, it throws tantrums.
-
----
-
-#### 9.2 My `.bashrc` Snippets
-
-*Stick this in your `~/.bashrc` for fun colors & a sweet `pyv` alias.*
-
-```bash
-# Source global definitions if they exist
-if [ -f /etc/bashrc ]; then
-    . /etc/bashrc
-fi
-
-# Fancy prompt coloring
-RESET_="\[$(tput sgr0)\]"
-BOLD_="\[$(tput bold)\]"
-HOSTNAME_="\[$(tput setaf 10)\]"
-DIR_="\[$(tput setaf 8)\]"
-WHITE_="\[$(tput setaf 15)\]"
-
-PS1="${BOLD_}${WHITE_}\u${HOSTNAME_}@\h${WHITE_}:${DIR_}\w${WHITE_}$ ${RESET_}${WHITE_}"
-
-# Aliases
-alias ls="ls --color=auto"
-alias la="ls -a --color=auto"
-alias py="python3"
-alias da="deactivate"
-
-# Quick-launch Python venv
-pyv() {
-    VENVPATH="${HOME}/venvs/$1"
-    if [ -d "$VENVPATH" ]; then
-        source "$VENVPATH/bin/activate"
-    else
-        echo "⚠️  Could not find virtual environment: $VENVPATH"
-    fi
-}
-
-# Cargo stuff (if you use Rust)
-. "$HOME/.cargo/env"
-
-# Add custom apps to PATH
-export PATH="$PATH:~/Applications"
-```
-
-> **Pro Tip:**
-> Create a `~/venvs/` folder, then do `python3 -m venv ~/venvs/grapes`. After that, `pyv grapes` is magic.
-
----
-
-#### 9.3 A Sample `kamiak.srun`
-
-*Save this as `run_kamiak.sh` (or whatever floats your boat) and `chmod +x` it:*
+**Sample \*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*`run_kamiak.sh`**:
 
 ```bash
 #!/bin/bash
-#SBATCH --partition=kamiak         # Queue
-#SBATCH --job-name=myJob           # Job name
-#SBATCH --output=result.out        # Stdout
-#SBATCH --error=errors.err         # Stderr
-#SBATCH --mail-type=ALL            # Notifications: BEGIN,END,FAIL,ALL
-#SBATCH --mail-user=your.name@wsu.edu
-#SBATCH --time=1-00:00:00          # 1 day
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=10
-#SBATCH --gres=gpu:tesla:1         # Request 1 GPU (Tesla)
+#SBATCH --partition=kamiak           # queue name
+#SBATCH --job-name=researchTest      # job name
+#SBATCH --output=results_%j.out      # stdout file (with job ID)
+#SBATCH --error=errors_%j.err        # stderr file
+#SBATCH --time=0-04:00:00            # runtime: hh:mm:ss
+#SBATCH --nodes=1                    # number of nodes\ n#SBATCH --cpus-per-task=8            # CPUs per task
+#SBATCH --mem=32G                    # memory request\ n#SBATCH --gres=gpu:1                 # GPU if needed
 
-# Your commands go here. Example:
-module load python3/3.11.4
-pyv grapes
-srun python my_heavy_script.py
+module load R/4.2.0
+Rscript analysis_pipeline.R         # or your Python script
 ```
 
-After you `sbatch run_kamiak.sh`, you’ll get a job ID—then:
+**Submit & Track**:
 
 ```bash
-echo "Check status: sacct --format=Elapsed,State -j <YOUR_JOB_ID>"
+sbatch run_kamiak.sh                # submit job
+squeue -u your.wsu.id               # view queued/running
+sacct -u your.wsu.id                # view completed jobs and resources used
+scancel <JOBID>                     # cancel if needed
 ```
 
-And voilà, you’re tracking progress like a pro.
+> **Deep dive**: Add mail notifications (`--mail-type=END,FAIL`) and adjust resources as your workflows evolve.
 
 ---
 
-🚀 Now get in there, mess around, and may your compute nodes be ever in your favor.
+### ✅ Hands-On: Submit Your First Research Job
 
+1. Create a minimal `.sh` script:
 
-Practice makes perfect—log in, transfer files, load modules, and submit a job or two. Soon you’ll be running simulations so big, your laptop will feel like a potato next to Kamiak. Good luck, and may your job queues be ever short! 🎉
+   * Load your analysis software (e.g., R or Python).
+   * Run a simple command (e.g., `Rscript -e 'print("Hello Kamiak Research")'`).
+   * Request modest time (e.g., 30m) and memory.
+2. Submit with `sbatch`, then run:
 
+   ```bash
+   squeue -u your.wsu.id  # in-progress
+   sacct -u your.wsu.id   # after completion
+   ```
+3. Check the output file for your script’s printout.
+
+---
+
+### 7. Be a Good Cluster Research Citizen
+
+* Request only what you need (time, memory, CPUs, GPUs).
+* Use `/scratch` for large I/O—don’t clog your home directory.
+* Regularly back up results elsewhere (Git, cloud).
+* Cite Kamiak and WSU HPC in any publications.
+* HPC support is friendly—reach out when stuck.
+
+---
+
+### 🏁 Summary for Researchers
+
+* SSH into Kamiak, transfer data, and load modules.
+* Set up your `~/tools` for custom dependencies.
+* Write and submit SLURM batch scripts for your experiments.
+* **Never compile or run resource-heavy tasks on the login node**—use `idev` or `sbatch`.
+
+Now you’re ready to scale your science—may your analyses run smoothly and your results be groundbreaking! 🚀
