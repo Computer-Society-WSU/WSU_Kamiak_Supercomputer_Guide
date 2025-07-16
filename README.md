@@ -1,4 +1,4 @@
-# Welcome to the Development and Kamiak Guide! 👋
+# Welcome to the Research Development Guide! 👋
 
 This repository contains a collection of guides designed to help researchers and developers with common tools and platforms. Whether you're new to version control or need to run computations on a supercomputer, these guides are here to help you get started.
 
