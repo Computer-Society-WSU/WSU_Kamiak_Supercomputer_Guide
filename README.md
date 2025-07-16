@@ -1,5 +1,3 @@
----
-
 ## 🚀 A User-Friendly Guide to the WSU Kamiak Supercomputer
 
 *For scientists, analysts, and researchers who need serious compute power—no CS degree required.*
